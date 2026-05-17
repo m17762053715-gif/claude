@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>科学计算器</title>
+<style>
+  /* ========== Reset & Variables ========== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f0f13;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.06);
+    --text: #f0f0f5;
+    --text-dim: rgba(255,255,255,0.4);
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --accent-glow: rgba(108,92,231,0.3);
+    --btn-bg: rgba(255,255,255,0.06);
+    --btn-hover: rgba(255,255,255,0.12);
+    --btn-func: rgba(108,92,231,0.2);
+    --btn-func-hover: rgba(108,92,231,0.35);
+    --btn-eq: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    --btn-op: rgba(253,121,168,0.2);
+    --btn-op-hover: rgba(253,121,168,0.35);
+    --shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    --transition: 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .light {
+    --bg: #f5f5fa;
+    --panel: rgba(255,255,255,0.7);
+    --border: rgba(0,0,0,0.08);
+    --text: #1a1a2e;
+    --text-dim: rgba(0,0,0,0.35);
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --accent-glow: rgba(108,92,231,0.15);
+    --btn-bg: rgba(0,0,0,0.04);
+    --btn-hover: rgba(0,0,0,0.08);
+    --btn-func: rgba(108,92,231,0.1);
+    --btn-func-hover: rgba(108,92,231,0.2);
+    --btn-op: rgba(253,121,168,0.1);
+    --btn-op-hover: rgba(253,121,168,0.2);
+    --shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.4s ease;
+    padding: 16px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* Animated background particles */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(108,92,231,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(162,155,254,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(253,121,168,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ========== Container ========== */
+  .calculator {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    background: var(--panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px 20px 20px;
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    animation: floatIn 0.6s ease-out;
+  }
+  @keyframes floatIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ========== Header ========== */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #fff; -webkit-text-fill-color: #fff;
+    font-weight: 700;
+  }
+  .header-actions { display: flex; gap: 8px; }
+  .header-btn {
+    width: 34px; height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--btn-bg);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    transition: all var(--transition);
+    position: relative;
+  }
+  .header-btn:hover {
+    background: var(--btn-hover);
+    color: var(--text);
+    transform: scale(1.05);
+  }
+  .header-btn.active {
+    background: var(--btn-func);
+    color: var(--accent);
+  }
+
+  /* ========== Display ========== */
+  .display {
+    background: rgba(0,0,0,0.25);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    min-height: 100px;
+    text-align: right;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: background 0.4s ease;
+  }
+  .light .display { background: rgba(255,255,255,0.5); }
+  .display .expression {
+    font-size: 15px;
+    color: var(--text-dim);
+    min-height: 22px;
+    word-break: break-all;
+    transition: color 0.3s;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+  }
+  .display .result {
+    font-size: 38px;
+    font-weight: 300;
+    line-height: 1.2;
+    min-height: 48px;
+    word-break: break-all;
+    transition: all 0.15s ease;
+    letter-spacing: -0.5px;
+  }
+  .display .result.pop { animation: pop 0.15s ease; }
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+  .display .memory-indicator {
+    position: absolute;
+    top: 8px; left: 14px;
+    font-size: 11px;
+    color: var(--accent2);
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .display .memory-indicator.show { opacity: 1; }
+
+  /* ========== Mode Tabs ========== */
+  .mode-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    transition: background 0.4s ease;
+  }
+  .light .mode-tabs { background: rgba(0,0,0,0.04); }
+  .mode-tab {
+    flex: 1;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    transition: all var(--transition);
+    font-family: var(--font);
+  }
+  .mode-tab.active {
+    background: var(--btn-bg);
+    color: var(--text);
+    backdrop-filter: blur(4px);
+  }
+  .mode-tab:hover:not(.active) { color: var(--text); }
+
+  /* ========== Button Grid ========== */
+  .btn-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .btn-grid.basic {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .btn-grid.scientific {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  /* ========== Buttons ========== */
+  .btn {
+    padding: 14px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--btn-bg);
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: var(--font);
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    text-align: center;
+  }
+  .btn:hover {
+    background: var(--btn-hover);
+    transform: translateY(-1px);
+  }
+  .btn:active {
+    transform: scale(0.94);
+  }
+  /* Ripple */
+  .btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    pointer-events: none;
+    animation: rippleAnim 0.5s ease-out forwards;
+  }
+  @keyframes rippleAnim {
+    0%   { width: 0; height: 0; opacity: 0.6; }
+    100% { width: 200px; height: 200px; opacity: 0; transform: translate(-50%,-50%); }
+  }
+
+  .btn.func { background: var(--btn-func); border-color: transparent; color: var(--accent2); font-size: 14px; }
+  .btn.func:hover { background: var(--btn-func-hover); }
+  .btn.op { background: var(--btn-op); border-color: transparent; color: #fd79a8; }
+  .btn.op:hover { background: var(--btn-op-hover); }
+  .btn.eq {
+    background: var(--btn-eq);
+    border-color: transparent;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px var(--accent-glow);
+  }
+  .btn.eq:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px var(--accent-glow);
+  }
+  .btn.double { grid-column: span 2; }
+  .btn.sm { font-size: 13px; }
+  .btn.xs { font-size: 12px; padding: 10px 0; }
+
+  /* ========== History Panel ========== */
+  .history-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .history-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .history-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: 340px;
+    max-width: 85vw;
+    height: 100vh;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.3);
+  }
+  .history-panel.open { transform: translateX(0); }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-header h3 { font-weight: 600; font-size: 16px; }
+  .history-clear {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font);
+    transition: all var(--transition);
+  }
+  .history-clear:hover { background: var(--btn-hover); color: var(--text); }
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .history-item {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--btn-bg);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .history-item:hover {
+    background: var(--btn-hover);
+    border-color: var(--border);
+    transform: translateX(4px);
+  }
+  .history-item .h-expr { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .history-item .h-result { font-size: 18px; font-weight: 500; }
+  .history-empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 0;
+    font-size: 14px;
+  }
+
+  /* ========== Responsive ========== */
+  @media (max-width: 440px) {
+    .calculator { padding: 16px 12px; border-radius: 12px; }
+    .display .result { font-size: 30px; }
+    .btn { padding: 12px 0; font-size: 15px; }
+    .btn.xs { font-size: 11px; padding: 8px 0; }
+    .btn.func { font-size: 12px; }
+    .btn-grid { gap: 6px; }
+    .display { padding: 12px 16px; min-height: 80px; }
+    .display .expression { font-size: 13px; }
+  }
+  @media (max-width: 360px) {
+    .btn { padding: 10px 0; font-size: 13px; }
+    .btn.func { font-size: 11px; }
+    .btn.xs { font-size: 10px; padding: 6px 0; }
+    .btn-grid { gap: 5px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="calculator" id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">∑</div>
+      <span class="logo">科学计算器</span>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" id="historyBtn" title="历史记录">📋</button>
+      <button class="header-btn" id="themeBtn" title="切换主题">🌙</button>
+    </div>
+  </div>
+
+  <!-- Display -->
+  <div class="display">
+    <div class="memory-indicator" id="memIndicator">M</div>
+    <div class="expression" id="expression"></div>
+    <div class="result" id="result">0</div>
+  </div>
+
+  <!-- Mode Tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="basic">基础</button>
+    <button class="mode-tab" data-mode="scientific">科学</button>
+  </div>
+
+  <!-- Basic Mode -->
+  <div class="btn-grid basic" id="basicGrid">
+    <button class="btn func xs" data-action="clear">C</button>
+    <button class="btn func xs" data-action="backspace">⌫</button>
+    <button class="btn func xs" data-action="percent">%</button>
+    <button class="btn op" data-action="divide">÷</button>
+
+    <button class="btn" data-action="7">7</button>
+    <button class="btn" data-action="8">8</button>
+    <button class="btn" data-action="9">9</button>
+    <button class="btn op" data-action="multiply">×</button>
+
+    <button class="btn" data-action="4">4</button>
+    <button class="btn" data-action="5">5</button>
+    <button class="btn" data-action="6">6</button>
+    <button class="btn op" data-action="subtract">−</button>
+
+    <button class="btn" data-action="1">1</button>
+    <button class="btn" data-action="2">2</button>
+    <button class="btn" data-action="3">3</button>
+    <button class="btn op" data-action="add">+</button>
+
+    <button class="btn double" data-action="0">0</button>
+    <button class="btn" data-action="decimal">.</button>
+    <button class="btn eq" data-action="equals">=</button>
+
+    <button class="btn func xs" data-action="paren">( )</button>
+    <button class="btn func xs" data-action="negate">±</button>
+    <button class="btn func xs" data-action="sqrt">√</button>
+    <button class="btn func xs" data-action="square">x²</button>
+  </div>
+
+  <!-- Scientific Mode -->
+  <div class="btn-grid scientific" id="sciGrid" style="display:none">
+    <button class="btn func xs" data-action="sin">sin</button>
+    <button class="btn func xs" data-action="cos">cos</button>
+    <button class="btn func xs" data-action="tan">tan</button>
+    <button class="btn func xs" data-action="log">log</button>
+    <button class="btn func xs" data-action="ln">ln</button>
+
+    <button class="btn func xs" data-action="sinh">sinh</button>
+    <button class="btn func xs" data-action="cosh">cosh</button>
+    <button class="btn func xs" data-action="tanh">tanh</button>
+    <button class="btn func xs" data-action="log2">log₂</button>
+    <button class="btn func xs" data-action="tenx">10ˣ</button>
+
+    <button class="btn func xs" data-action="paren">( )</button>
+    <button class="btn func xs" data-action="percent">%</button>
+    <button class="btn func xs" data-action="ce">CE</button>
+    <button class="btn func xs" data-action="clear">C</button>
+    <button class="btn func xs" data-action="backspace">⌫</button>
+
+    <button class="btn" data-action="7">7</button>
+    <button class="btn" data-action="8">8</button>
+    <button class="btn" data-action="9">9</button>
+    <button class="btn op" data-action="divide">÷</button>
+    <button class="btn func xs" data-action="sqrt">√</button>
+
+    <button class="btn" data-action="4">4</button>
+    <button class="btn" data-action="5">5</button>
+    <button class="btn" data-action="6">6</button>
+    <button class="btn op" data-action="multiply">×</button>
+    <button class="btn func xs" data-action="pow">xʸ</button>
+
+    <button class="btn" data-action="1">1</button>
+    <button class="btn" data-action="2">2</button>
+    <button class="btn" data-action="3">3</button>
+    <button class="btn op" data-action="subtract">−</button>
+    <button class="btn func xs" data-action="abs">|x|</button>
+
+    <button class="btn func xs" data-action="negate">±</button>
+    <button class="btn" data-action="0">0</button>
+    <button class="btn" data-action="decimal">.</button>
+    <button class="btn op" data-action="add">+</button>
+    <button class="btn eq" data-action="equals">=</button>
+  </div>
+</div>
+
+<!-- History Overlay & Panel -->
+<div class="history-overlay" id="historyOverlay"></div>
+<div class="history-panel" id="historyPanel">
+  <div class="history-header">
+    <h3>历史记录</h3>
+    <button class="history-clear" id="historyClear">清空</button>
+  </div>
+  <div class="history-list" id="historyList">
+    <div class="history-empty">暂无计算记录</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  Scientific Calculator - Full Engine
+// ============================================================
+
+const App = {
+  el: {
+    result: document.getElementById('result'),
+    expression: document.getElementById('expression'),
+    basicGrid: document.getElementById('basicGrid'),
+    sciGrid: document.getElementById('sciGrid'),
+    historyList: document.getElementById('historyList'),
+    historyPanel: document.getElementById('historyPanel'),
+    historyOverlay: document.getElementById('historyOverlay'),
+    historyClear: document.getElementById('historyClear'),
+    themeBtn: document.getElementById('themeBtn'),
+    historyBtn: document.getElementById('historyBtn'),
+    memIndicator: document.getElementById('memIndicator'),
+    modeTabs: document.querySelectorAll('.mode-tab'),
+  },
+
+  state: {
+    display: '0',
+    expr: '',
+    memory: null,
+    angleMode: 'DEG',    // DEG | RAD
+    mode: 'basic',
+    dark: true,
+    history: [],
+    justEvaluated: false,
+    openParens: 0,
+    lastAnswer: null,
+  },
+
+  // ---- Init ----
+  init() {
+    this.loadHistory();
+    this.loadTheme();
+    this.bindEvents();
+    this.render();
+  },
+
+  // ---- Event Binding ----
+  bindEvents() {
+    // Button clicks via delegation
+    document.querySelector('.calculator').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn');
+      if (!btn) return;
+      this.ripple(btn, e);
+      const action = btn.dataset.action;
+      if (action) this.handleAction(action);
+    });
+
+    // Mode tabs
+    this.el.modeTabs.forEach(tab => {
+      tab.addEventListener('click', () => this.switchMode(tab.dataset.mode));
+    });
+
+    // Theme
+    this.el.themeBtn.addEventListener('click', () => this.toggleTheme());
+
+    // History
+    this.el.historyBtn.addEventListener('click', () => this.openHistory());
+    this.el.historyOverlay.addEventListener('click', () => this.closeHistory());
+    this.el.historyClear.addEventListener('click', () => this.clearHistory());
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+  },
+
+  // ---- Ripple Effect ----
+  ripple(btn, evt) {
+    const circle = document.createElement('span');
+    circle.className = 'ripple';
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = ((evt && evt.clientX) || rect.left + rect.width/2) - rect.left - size/2;
+    const y = ((evt && evt.clientY) || rect.top + rect.height/2) - rect.top - size/2;
+    circle.style.cssText = `left:${x+size/2}px;top:${y+size/2}px;width:0;height:0;`;
+    btn.appendChild(circle);
+    setTimeout(() => circle.remove(), 500);
+  },
+
+  // ---- Action Dispatcher ----
+  handleAction(action) {
+    switch (action) {
+      // Digits
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
+        this.inputDigit(action); break;
+      case 'decimal': this.inputDecimal(); break;
+
+      // Operators
+      case 'add': case 'subtract': case 'multiply': case 'divide':
+        this.inputOperator(action); break;
+
+      // Functions
+      case 'sqrt': this.unaryOp(Math.sqrt, '√'); break;
+      case 'square': this.unaryOp(x => x*x, '²'); break;
+      case 'reciprocal': this.unaryOp(x => 1/x, '1/'); break;
+      case 'factorial': this.unaryOp(this.factorial, '!'); break;
+      case 'negate': this.negate(); break;
+      case 'percent': this.unaryOp(x => x/100, '%'); break;
+      case 'abs': this.unaryOp(Math.abs, '| |'); break;
+
+      // Scientific
+      case 'sin': this.trigOp(Math.sin); break;
+      case 'cos': this.trigOp(Math.cos); break;
+      case 'tan': this.trigOp(Math.tan); break;
+      case 'sinh': this.unaryOp(Math.sinh, 'sinh'); break;
+      case 'cosh': this.unaryOp(Math.cosh, 'cosh'); break;
+      case 'tanh': this.unaryOp(Math.tanh, 'tanh'); break;
+      case 'log': this.unaryOp(Math.log10, 'log'); break;
+      case 'ln': this.unaryOp(Math.log, 'ln'); break;
+      case 'log2': this.unaryOp(Math.log2, 'log₂'); break;
+      case 'tenx': this.unaryOp(x => Math.pow(10, x), '10^'); break;
+      case 'exp': this.unaryOp(Math.exp, 'exp'); break;
+
+      // Power
+      case 'pow': this.binaryOp('^', (a,b) => Math.pow(a,b)); break;
+
+      // Constants
+      case 'pi': this.inputConst(Math.PI, 'π'); break;
+      case 'euler': this.inputConst(Math.E, 'e'); break;
+
+      // Parens
+      case 'paren': this.inputParen(); break;
+
+      // Control
+      case 'ce': this.clearEntry(); break;
+      case 'clear': this.clearAll(); break;
+      case 'backspace': this.backspace(); break;
+      case 'equals': this.evaluate(); break;
+    }
+  },
+
+  // ---- Digit Input ----
+  inputDigit(d) {
+    if (this.state.justEvaluated) {
+      this.state.display = d;
+      this.state.expr = '';
+      this.state.justEvaluated = false;
+      this.state.openParens = 0;
+    } else {
+      if (this.state.display === '0' && d !== '.') {
+        this.state.display = d;
+      } else {
+        if (this.state.display.replace(/[-.()]/g,'').length >= 15) return;
+        this.state.display += d;
+      }
+    }
+    this.render();
+  },
+
+  inputDecimal() {
+    if (this.state.justEvaluated) {
+      this.state.display = '0.';
+      this.state.expr = '';
+      this.state.justEvaluated = false;
+      this.state.openParens = 0;
+      this.render();
+      return;
+    }
+    // Find current number
+    const parts = this.state.display.split(/(?<=[\d.)])(?=[+\-×÷^])|(?<=[+\-×÷^])(?=[\d.(])/);
+    const last = parts[parts.length-1] || '';
+    if (!last.includes('.')) {
+      this.state.display += '.';
+    }
+    this.render();
+  },
+
+  // ---- Operator Input ----
+  inputOperator(op) {
+    this.state.justEvaluated = false;
+    const sym = { add:'+', subtract:'−', multiply:'×', divide:'÷' }[op] || op;
+    // Replace trailing operator
+    const d = this.state.display;
+    if (/[+\-−×÷^]$/.test(d)) {
+      this.state.display = d.slice(0, -1) + sym;
+    } else {
+      this.state.display += sym;
+    }
+    this.render();
+  },
+
+  // ---- Unary Operations ----
+  unaryOp(fn, symbol) {
+    const val = this.parseCurrent();
+    if (val === null) return;
+    try {
+      const result = fn(val);
+      if (!isFinite(result)) throw new Error('Math Error');
+      const formatted = this.formatNumber(result);
+      this.state.expr = `${symbol}(${this.formatNumber(val)})`;
+      this.state.display = formatted;
+      this.state.justEvaluated = true;
+      this.state.lastAnswer = result;
+      this.addHistory(this.state.expr, formatted);
+      this.animateResult();
+    } catch (e) {
+      this.state.display = '错误';
+      this.state.justEvaluated = true;
+    }
+    this.render();
+  },
+
+  trigOp(fn) {
+    const val = this.parseCurrent();
+    if (val === null) return;
+    try {
+      const angle = this.state.angleMode === 'DEG' ? val * Math.PI / 180 : val;
+      const result = fn(angle);
+      if (!isFinite(result)) throw new Error('Math Error');
+      const name = `sin${this.state.angleMode==='DEG'?'°':''}`;
+      this.state.expr = `${fn===Math.sin?'sin':fn===Math.cos?'cos':'tan'}(${this.formatNumber(val)}${this.state.angleMode==='DEG'?'°':''})`;
+      this.state.display = this.formatNumber(result);
+      this.state.justEvaluated = true;
+      this.state.lastAnswer = result;
+      this.addHistory(this.state.expr, this.state.display);
+      this.animateResult();
+    } catch (e) {
+      this.state.display = '错误';
+      this.state.justEvaluated = true;
+    }
+    this.render();
+  },
+
+  binaryOp(symbol, fn) {
+    this.state.justEvaluated = false;
+    const d = this.state.display;
+    if (/[+\-−×÷^]$/.test(d)) {
+      this.state.display = d.slice(0, -1) + symbol;
+    } else {
+      this.state.display += symbol;
+    }
+    this.render();
+    // Store the function for evaluation
+    this._pendingBinary = { symbol, fn };
+  },
+
+  negate() {
+    const d = this.state.display;
+    if (d === '0' || d === '0.') return;
+    // Negate current number
+    const parts = d.split(/(?<=[\d.)])(?=[+\-−×÷^])|(?<=[+\-−×÷^])(?=[\d.(])/);
+    if (parts.length === 0) return;
+    const last = parts[parts.length-1];
+    if (last.startsWith('-')) {
+      parts[parts.length-1] = last.slice(1);
+    } else if (last !== '') {
+      parts[parts.length-1] = '-' + last;
+    }
+    this.state.display = parts.join('');
+    this.render();
+  },
+
+  inputConst(val, sym) {
+    if (this.state.justEvaluated) {
+      this.state.display = sym;
+      this.state.expr = '';
+      this.state.justEvaluated = false;
+      this.state.openParens = 0;
+    } else {
+      const d = this.state.display;
+      if (d === '0') {
+        this.state.display = sym;
+      } else {
+        this.state.display += sym;
+      }
+    }
+    this.render();
+  },
+
+  inputParen() {
+    // Try to auto-pair: if just evaluated or display is 0, open paren
+    if (this.state.justEvaluated || this.state.display === '0') {
+      this.state.display = '(';
+      this.state.justEvaluated = false;
+      this.state.openParens = 1;
+    } else {
+      // Check if we should close
+      const d = this.state.display;
+      const openCount = (d.match(/\(/g) || []).length;
+      const closeCount = (d.match(/\)/g) || []).length;
+      if (openCount > closeCount && /[\d.)]$/.test(d)) {
+        this.state.display += ')';
+      } else {
+        this.state.display += '(';
+      }
+    }
+    this.render();
+  },
+
+  // ---- Control ----
+  clearEntry() {
+    this.state.display = '0';
+    this.render();
+  },
+
+  clearAll() {
+    this.state.display = '0';
+    this.state.expr = '';
+    this.state.justEvaluated = false;
+    this.state.openParens = 0;
+    this.render();
+  },
+
+  backspace() {
+    if (this.state.justEvaluated) {
+      this.clearAll();
+      return;
+    }
+    const d = this.state.display;
+    if (d.length <= 1 || d === '0') {
+      this.state.display = '0';
+    } else {
+      this.state.display = d.slice(0, -1);
+    }
+    this.render();
+  },
+
+  // ---- Evaluation ----
+  evaluate() {
+    const expr = this.state.display;
+    if (!expr || expr === '0') return;
+
+    try {
+      // Replace constants
+      let evalStr = expr
+        .replace(/π/g, `(${Math.PI})`)
+        .replace(/e(?![xp])/g, `(${Math.E})`)  // e but not 'exp'
+        .replace(/×/g, '*')
+        .replace(/−/g, '-')
+        .replace(/÷/g, '/');
+
+      // Check for implicit binary op from pow
+      if (this._pendingBinary && evalStr.includes('^')) {
+        evalStr = evalStr.replace(/\^/g, '**');
+      } else {
+        evalStr = evalStr.replace(/\^/g, '**');
+      }
+
+      // Security: only allow safe characters
+      if (!/^[\d+\-*/().%\s]+$/.test(evalStr)) {
+        // Try to evaluate with more permissive approach
+        // Using Function constructor for evaluation
+      }
+
+      const result = Function(`'use strict'; return (${evalStr})`)();
+      if (!isFinite(result)) throw new Error('Math Error');
+
+      // Format
+      const formatted = this.formatNumber(result);
+
+      // Save to history
+      this.addHistory(expr, formatted);
+
+      this.state.expr = expr + ' =';
+      this.state.display = formatted;
+      this.state.justEvaluated = true;
+      this.state.lastAnswer = result;
+      this.state.openParens = 0;
+      this._pendingBinary = null;
+      this.animateResult();
+    } catch (e) {
+      this.state.expr = expr;
+      this.state.display = '错误';
+      this.state.justEvaluated = true;
+    }
+    this.render();
+  },
+
+  parseCurrent() {
+    const d = this.state.display;
+    if (d === '0' || d === '' || d === '错误') return null;
+    // Try to evaluate current display as a number
+    let str = d.replace(/×/g,'*').replace(/−/g,'-').replace(/÷/g,'/').replace(/π/g, Math.PI).replace(/e(?![xp])/g, Math.E);
+    try {
+      const val = Function(`'use strict'; return (${str})`)();
+      if (typeof val === 'number' && isFinite(val)) return val;
+      return parseFloat(d) || null;
+    } catch {
+      return parseFloat(d) || null;
+    }
+  },
+
+  // ---- Helpers ----
+  factorial(n) {
+    if (n < 0) throw new Error('负数');
+    if (n === 0 || n === 1) return 1;
+    if (!Number.isInteger(n)) return Math.exp(Math.lgamma(n+1)); // Gamma approx
+    let r = 1;
+    for (let i = 2; i <= n; i++) r *= i;
+    return r;
+  },
+
+  formatNumber(n) {
+    if (!isFinite(n)) return '错误';
+    if (Math.abs(n) > 1e15 || (Math.abs(n) < 1e-10 && n !== 0)) {
+      return n.toExponential(6);
+    }
+    // Remove trailing zeros
+    let s = String(n);
+    if (s.includes('.') && !s.includes('e')) {
+      s = s.replace(/\.?0+$/, '');
+    }
+    // Limit precision
+    if (s.length > 16 && !s.includes('e')) {
+      s = parseFloat(s).toPrecision(12);
+      s = String(parseFloat(s));
+    }
+    if (s.length > 20) {
+      return n.toExponential(6);
+    }
+    return s;
+  },
+
+  animateResult() {
+    this.el.result.classList.remove('pop');
+    void this.el.result.offsetWidth;
+    this.el.result.classList.add('pop');
+  },
+
+  // ---- History ----
+  addHistory(expr, result) {
+    this.state.history.unshift({ expr, result, time: Date.now() });
+    if (this.state.history.length > 50) this.state.history.pop();
+    this.saveHistory();
+    if (this.el.historyPanel.classList.contains('open')) {
+      this.renderHistory();
+    }
+  },
+
+  loadHistory() {
+    try {
+      const data = localStorage.getItem('calc_history');
+      if (data) this.state.history = JSON.parse(data);
+    } catch {}
+  },
+
+  saveHistory() {
+    try {
+      localStorage.setItem('calc_history', JSON.stringify(this.state.history));
+    } catch {}
+  },
+
+  renderHistory() {
+    const list = this.el.historyList;
+    if (this.state.history.length === 0) {
+      list.innerHTML = '<div class="history-empty">暂无计算记录</div>';
+      return;
+    }
+    list.innerHTML = this.state.history.map((item, i) =>
+      `<div class="history-item" data-idx="${i}">
+        <div class="h-expr">${this.escapeHtml(item.expr)}</div>
+        <div class="h-result">= ${this.escapeHtml(item.result)}</div>
+      </div>`
+    ).join('');
+
+    // Click to restore
+    list.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.idx);
+        const item = this.state.history[idx];
+        if (item) {
+          this.state.display = item.result;
+          this.state.justEvaluated = true;
+          this.state.expr = item.expr + ' =';
+          this.render();
+          this.closeHistory();
+        }
+      });
+    });
+  },
+
+  escapeHtml(str) {
+    return str.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  },
+
+  openHistory() {
+    this.el.historyPanel.classList.add('open');
+    this.el.historyOverlay.classList.add('open');
+    this.renderHistory();
+  },
+
+  closeHistory() {
+    this.el.historyPanel.classList.remove('open');
+    this.el.historyOverlay.classList.remove('open');
+  },
+
+  clearHistory() {
+    this.state.history = [];
+    this.saveHistory();
+    this.renderHistory();
+  },
+
+  // ---- Theme ----
+  toggleTheme() {
+    this.state.dark = !this.state.dark;
+    document.body.classList.toggle('light', !this.state.dark);
+    this.el.themeBtn.textContent = this.state.dark ? '🌙' : '☀️';
+    localStorage.setItem('calc_theme', this.state.dark ? 'dark' : 'light');
+  },
+
+  loadTheme() {
+    const t = localStorage.getItem('calc_theme');
+    if (t === 'light') {
+      this.state.dark = false;
+      document.body.classList.add('light');
+      this.el.themeBtn.textContent = '☀️';
+    }
+  },
+
+  // ---- Mode ----
+  switchMode(mode) {
+    this.state.mode = mode;
+    this.el.modeTabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    this.el.basicGrid.style.display = mode === 'basic' ? 'grid' : 'none';
+    this.el.sciGrid.style.display = mode === 'scientific' ? 'grid' : 'none';
+  },
+
+  // ---- Keyboard ----
+  handleKeyboard(e) {
+    const key = e.key;
+    if (key >= '0' && key <= '9') { this.handleAction(key); e.preventDefault(); }
+    else if (key === '.') { this.handleAction('decimal'); e.preventDefault(); }
+    else if (key === '+') { this.handleAction('add'); e.preventDefault(); }
+    else if (key === '-') { this.handleAction('subtract'); e.preventDefault(); }
+    else if (key === '*') { this.handleAction('multiply'); e.preventDefault(); }
+    else if (key === '/') { this.handleAction('divide'); e.preventDefault(); }
+    else if (key === 'Enter' || key === '=') { this.handleAction('equals'); e.preventDefault(); }
+    else if (key === 'Backspace') { this.handleAction('backspace'); e.preventDefault(); }
+    else if (key === 'Escape') { this.handleAction('clear'); e.preventDefault(); }
+    else if (key === '(' || key === ')') { this.handleAction('paren'); e.preventDefault(); }
+    else if (key === '%') { this.handleAction('percent'); e.preventDefault(); }
+    else if (key === 'p' || key === 'P') { this.handleAction('pi'); e.preventDefault(); }
+    else if (key === '^') { this.handleAction('pow'); e.preventDefault(); }
+  },
+
+  // ---- Render ----
+  render() {
+    this.el.result.textContent = this.state.display;
+    this.el.expression.textContent = this.state.expr;
+    this.el.memIndicator.classList.toggle('show', this.state.memory !== null);
+  }
+};
+
+// Start
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
